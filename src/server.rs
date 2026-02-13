@@ -10,12 +10,16 @@ pub async fn get_calendar() -> impl IntoResponse {
 }
 
 pub async fn process_schedule(headers: HeaderMap, Json(data): Json<WhatsappMessage>) -> impl IntoResponse {
+    println!("Received request");
+    
     if !headers.get("marco")
         .and_then(|v| v.to_str().ok())
         .map(|v| v == "polo")
         .unwrap_or(false) {
         return (StatusCode::UNAUTHORIZED, "Unauthorized").into_response();
     }
+
+    println!("Header valid");
 
     parse_schedule(data);
 

@@ -20,9 +20,12 @@ static RE_BODY: LazyLock<Regex> = LazyLock::new(|| {
 });
 
 pub fn parse_schedule(data: WhatsappMessage) {
+    println!("Parsing...");
     if (!RE_BODY.is_match(&data.body) || data.media.is_none()) {
         return;
     }
+
+    println!("Regex match");
 
     tokio::spawn(async move {
         process_schedule(data).await;
@@ -30,13 +33,19 @@ pub fn parse_schedule(data: WhatsappMessage) {
 }
 
 async fn process_schedule(data: WhatsappMessage) {
+    println!("Processing...");
+
     let Some(meta) = parse_metadata(data.body) else {
         return;
     };
 
+    println!("Meta parsed");
+
     let Ok(image_data) = fetch_image(data.media.unwrap().url).await else {
         return;
     };
+
+    println!("Image fetched");
 
     let contents = parse_image(image_data);
 
@@ -44,6 +53,7 @@ async fn process_schedule(data: WhatsappMessage) {
 }
 
 async fn fetch_image(url: String) -> Result<bytes::Bytes, reqwest::Error> {
+    println!("Fetching image...");
     let client = reqwest::Client::new();
 
     let response = client
@@ -58,6 +68,7 @@ async fn fetch_image(url: String) -> Result<bytes::Bytes, reqwest::Error> {
 }
 
 async fn parse_image(data: bytes::Bytes) -> Result<String, Box<dyn std::error::Error>> {
+    println!("Parsing image...");
     let config = aws_config::load_defaults(BehaviorVersion::latest()).await;
     let client = aws_sdk_textract::Client::new(&config);
 
@@ -69,6 +80,8 @@ async fn parse_image(data: bytes::Bytes) -> Result<String, Box<dyn std::error::E
         .feature_types(FeatureType::Tables)
         .send()
         .await?;
+
+    println!("Textract success");
 
     let blocks = response.blocks.unwrap_or_default();
 
