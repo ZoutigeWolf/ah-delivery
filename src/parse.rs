@@ -1,11 +1,12 @@
 use crate::models::{Planning, WhatsappMessage};
+use chrono::{NaiveDate};
 use regex::Regex;
 use reqwest::header::AUTHORIZATION;
 use std::env;
 use std::sync::LazyLock;
-use chrono::{Date, NaiveDate, Utc};
-use image::{DynamicImage, GenericImageView};
-use tesseract::Tesseract;
+use aws_config::BehaviorVersion;
+use aws_sdk_textract::primitives::Blob;
+use aws_sdk_textract::types::{Document, FeatureType};
 
 static API_KEY: LazyLock<String> = LazyLock::new(|| {
     env::var("WAHA_API_KEY").expect("WAHA_API_KEY must be set in the environment")
@@ -30,7 +31,7 @@ pub fn parse_schedule(data: WhatsappMessage) {
 
 async fn process_schedule(data: WhatsappMessage) {
     let Some(meta) = parse_metadata(data.body) else {
-      return;
+        return;
     };
 
     let Ok(image_data) = fetch_image(data.media.unwrap().url).await else {
@@ -40,7 +41,6 @@ async fn process_schedule(data: WhatsappMessage) {
     let contents = parse_image(image_data);
 
     println!("{:#?}", meta);
-    println!("{:#?}", contents);
 }
 
 async fn fetch_image(url: String) -> Result<bytes::Bytes, reqwest::Error> {
@@ -57,23 +57,24 @@ async fn fetch_image(url: String) -> Result<bytes::Bytes, reqwest::Error> {
     Ok(response.bytes().await?)
 }
 
-fn parse_image(data: bytes::Bytes) -> Result<String, Box<dyn std::error::Error>> {
-    let img = image::load_from_memory(&data)?.to_luma8();
-    let (width, height) = img.dimensions();
-    let pixel_data = img.as_raw();
+async fn parse_image(data: bytes::Bytes) -> Result<String, Box<dyn std::error::Error>> {
+    let config = aws_config::load_defaults(BehaviorVersion::latest()).await;
+    let client = aws_sdk_textract::Client::new(&config);
 
-    let tes = Tesseract::new(None, None)?;
+    let blob = Blob::new(data);
 
-    let text = tes.set_frame(
-        pixel_data,
-        width as i32,
-        height as i32,
-        1,
-        width as i32
-    )?.get_text()?;
+    let response = client
+        .analyze_document()
+        .document(Document::builder().bytes(blob).build())
+        .feature_types(FeatureType::Tables)
+        .send()
+        .await?;
 
+    let blocks = response.blocks.unwrap_or_default();
 
-    Ok(text)
+    println!("{:#?}", blocks);
+
+    Ok("".parse()?)
 }
 
 fn parse_metadata(data: String) -> Option<(NaiveDate, Planning)> {
