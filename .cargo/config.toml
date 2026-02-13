@@ -1,0 +1,2 @@
+[env]
+BINDGEN_EXTRA_CLANG_ARGS = "-target aarch64-apple-darwin"
