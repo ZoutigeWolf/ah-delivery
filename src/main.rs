@@ -7,6 +7,8 @@ use tokio::net::TcpListener;
 mod server;
 mod models;
 mod parse;
+mod database;
+mod date;
 
 async fn start_webserver() {
     println!("Starting webserver...");
@@ -27,6 +29,8 @@ async fn start_webserver() {
 
 #[tokio::main]
 async fn main() {
+    dotenvy::dotenv().ok();
+
     start_webserver().await;
 
     loop {
