@@ -1,7 +1,3 @@
-use chrono::{Datelike, Duration, Local, NaiveTime};
-use std::collections::HashSet;
-use std::env;
-use std::sync::LazyLock;
 use crate::database::fetch_shifts;
 use crate::date;
 use crate::models::{Shift, WhatsappMessage};
@@ -9,10 +5,13 @@ use crate::parse::parse_schedule;
 use axum::Json;
 use axum::http::{HeaderMap, StatusCode, header};
 use axum::response::IntoResponse;
-use chrono::{Utc};
-use ics::properties::{DtEnd, DtStart};
+use chrono::Utc;
+use chrono::{Datelike, Duration, Local};
+use ics::properties::{Description, DtEnd, DtStart, Location, Summary};
 use ics::{Event, ICalendar};
-use crate::models::Planning::PA;
+use std::collections::HashSet;
+use std::env;
+use std::sync::LazyLock;
 
 pub static DAYS: LazyLock<HashSet<u8>> = LazyLock::new(|| {
     let s = env::var("DAYS").expect("DAYS must be set");
@@ -20,10 +19,7 @@ pub static DAYS: LazyLock<HashSet<u8>> = LazyLock::new(|| {
     let mut set = HashSet::new();
 
     for part in s.split(',') {
-        let day: u8 = part
-            .trim()
-            .parse()
-            .expect("DAYS must contain numbers 1-7");
+        let day: u8 = part.trim().parse().expect("DAYS must contain numbers 1-7");
 
         if !(1..=7).contains(&day) {
             panic!("DAYS values must be between 1 and 7");
@@ -72,6 +68,13 @@ pub async fn get_calendar() -> impl IntoResponse {
         event.push(DtEnd::new(date::to_string(date::combine(
             shift.date, shift.end,
         ))));
+
+        event.push(Summary::new(shift.code()));
+        event.push(Location::new("HSC Bleiswijk\\nAquamarijnweg 2\\, 2665 PB\\nBleiswijk\\, Netherlands"));
+
+        if let Some(info) = shift.info.clone() {
+            event.push(Description::new(info));
+        }
 
         cal.add_event(event);
     }

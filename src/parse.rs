@@ -1,22 +1,21 @@
+use crate::database::upload_shift;
 use crate::models::{Planning, Shift, WhatsappMessage};
 use aws_config::BehaviorVersion;
 use aws_sdk_textract::primitives::Blob;
 use aws_sdk_textract::types::{Block, BlockType, Document, FeatureType, RelationshipType};
 use chrono::{NaiveDate, NaiveTime};
 use regex::Regex;
-use reqwest::header::AUTHORIZATION;
-use std::collections::{BTreeMap, HashMap};
+use std::collections::HashMap;
 use std::env;
+use std::error::Error;
 use std::sync::LazyLock;
-use crate::database::upload_shift;
 
 static API_KEY: LazyLock<String> = LazyLock::new(|| {
     env::var("WAHA_API_KEY").expect("WAHA_API_KEY must be set in the environment")
 });
 
-static BOFF_ID: LazyLock<String> = LazyLock::new(|| {
-    env::var("BOFF_ID").expect("BOFF_ID must be set in the environment")
-});
+static BOFF_ID: LazyLock<String> =
+    LazyLock::new(|| env::var("BOFF_ID").expect("BOFF_ID must be set in the environment"));
 
 static RE_BODY: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(
@@ -27,7 +26,10 @@ static RE_BODY: LazyLock<Regex> = LazyLock::new(|| {
 
 pub fn parse_schedule(data: WhatsappMessage) {
     println!("Parsing...");
-    if (!RE_BODY.is_match(&data.body) || data.media.is_none()) {
+    if !RE_BODY.is_match(&data.body)
+        || data.media.is_none()
+        || data.media.as_ref().unwrap().mimetype != "image/jpeg"
+    {
         return;
     }
 
@@ -67,17 +69,18 @@ async fn process_schedule(data: WhatsappMessage) {
 
     println!("Shifts parsed");
 
-    println!("{:#?}", shifts);
-
     let Some(shift) = shifts.iter().find(|s| s.boff_id == *BOFF_ID) else {
         println!("Shift not found");
         return;
     };
 
-    let Ok(_) = upload_shift(shift).await else {
-        println!("Failed to upload shift");
-        return;
-    };
+    match upload_shift(shift).await {
+        Ok(_) => {}
+        Err(e) => {
+            println!("Failed to upload shift: {:?}", e.source());
+            return;
+        }
+    }
 
     println!("Shift uploaded");
 }

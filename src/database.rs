@@ -3,12 +3,12 @@ use std::env;
 use std::sync::LazyLock;
 use tokio_postgres::{Error, NoTls, Row};
 
-static POSTGRES_URL: LazyLock<String> = LazyLock::new(|| {
-    env::var("POSTGRES_URL").expect("POSTGRES_URL must be set in the environment")
+static POSTGRES_CREDENTIALS: LazyLock<String> = LazyLock::new(|| {
+    env::var("POSTGRES_CREDENTIALS").expect("POSTGRES_CREDENTIALS must be set in the environment")
 });
 
 pub async fn upload_shift(shift: &Shift) -> Result<(), Error> {
-    let (client, connection) = tokio_postgres::connect(&POSTGRES_URL, NoTls).await?;
+    let (client, connection) = tokio_postgres::connect(&POSTGRES_CREDENTIALS, NoTls).await?;
 
     tokio::spawn(async move {
         if let Err(e) = connection.await {
@@ -19,13 +19,13 @@ pub async fn upload_shift(shift: &Shift) -> Result<(), Error> {
     client
         .execute(
             "
-        INSERT INTO shifts (boff_id, name, date, planning, start, start, info)
+        INSERT INTO shifts (boff_id, name, date, planning, start, \"end\", info)
         VALUES ($1, $2, $3, $4, $5, $6, $7)
         ON CONFLICT (date, planning, boff_id)
         DO UPDATE SET
             name = EXCLUDED.name,
             start = EXCLUDED.start,
-            start = EXCLUDED.start,
+            \"end\" = EXCLUDED.\"end\",
             info = EXCLUDED.info;
         ",
             &[
@@ -44,7 +44,7 @@ pub async fn upload_shift(shift: &Shift) -> Result<(), Error> {
 }
 
 pub async fn fetch_shifts() -> Result<Vec<Shift>, Error> {
-    let (client, connection) = tokio_postgres::connect(&POSTGRES_URL, NoTls).await?;
+    let (client, connection) = tokio_postgres::connect(&POSTGRES_CREDENTIALS, NoTls).await?;
 
     tokio::spawn(async move {
         if let Err(e) = connection.await {

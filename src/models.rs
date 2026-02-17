@@ -1,7 +1,14 @@
-use chrono::{NaiveDate, NaiveTime};
-use serde::Deserialize;
-use postgres_types::{ToSql, FromSql};
+use std::env;
+use std::sync::LazyLock;
+use chrono::Datelike;
 use crate::models::Planning::PA;
+use chrono::{NaiveDate, NaiveTime, Weekday};
+use postgres_types::{FromSql, ToSql};
+use serde::Deserialize;
+
+static BOFF_ID: LazyLock<String> =
+    LazyLock::new(|| env::var("BOFF_ID").expect("BOFF_ID must be set in the environment"));
+
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct WhatsappMessage {
@@ -36,6 +43,7 @@ pub struct Shift {
 }
 
 #[derive(Debug, ToSql, FromSql, Copy, Clone)]
+#[postgres(name = "planning")]
 pub enum Planning {
     #[postgres(name = "PO")]
     PO,
@@ -47,17 +55,35 @@ pub enum Planning {
 impl Shift {
     pub fn default(date: NaiveDate) -> Shift {
         Shift {
-            boff_id: "".into(),
+            boff_id: BOFF_ID.clone(),
             name: "".into(),
             date,
             planning: PA,
             start: NaiveTime::from_hms_opt(15, 00, 00).unwrap(),
             end: NaiveTime::from_hms_opt(22, 00, 00).unwrap(),
             info: Some("".into()),
-
         }
     }
     pub fn uid(&self) -> String {
         format!("{}-{:?}-{}", self.date, self.planning, self.boff_id)
+    }
+
+    pub fn code(&self) -> String {
+        let day_prefix = match self.date.weekday() {
+            Weekday::Mon => "MA",
+            Weekday::Tue => "DI",
+            Weekday::Wed => "WO",
+            Weekday::Thu => "DO",
+            Weekday::Fri => "VR",
+            Weekday::Sat => "ZA",
+            Weekday::Sun => "ZO",
+        };
+
+        let planning_suffix = match self.planning {
+            Planning::PO => "PO",
+            Planning::PA => "PA",
+        };
+
+        format!("{}{}", day_prefix, planning_suffix)
     }
 }
