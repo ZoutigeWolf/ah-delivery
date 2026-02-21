@@ -67,7 +67,7 @@ impl Shift {
             planning: PA,
             start: NaiveTime::from_hms_opt(15, 00, 00).unwrap(),
             end: NaiveTime::from_hms_opt(22, 00, 00).unwrap(),
-            info: Some("".into()),
+            info: None,
         }
     }
     pub fn uid(&self) -> String {
