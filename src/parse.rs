@@ -14,6 +14,9 @@ static API_KEY: LazyLock<String> = LazyLock::new(|| {
     env::var("WAHA_API_KEY").expect("WAHA_API_KEY must be set in the environment")
 });
 
+static WAHA_HOST: LazyLock<String> =
+    LazyLock::new(|| env::var("WAHA_HOST").expect("WAHA_HOST must be set in the environment"));
+
 static BOFF_ID: LazyLock<String> =
     LazyLock::new(|| env::var("BOFF_ID").expect("BOFF_ID must be set in the environment"));
 
@@ -49,7 +52,14 @@ async fn process_schedule(data: WhatsappMessage) {
 
     println!("Meta parsed");
 
-    let image_data = match fetch_image(data.payload.media.unwrap().url).await {
+    let url = data
+        .payload
+        .media
+        .unwrap()
+        .url
+        .replace("localhost", &WAHA_HOST);
+
+    let image_data = match fetch_image(url).await {
         Ok(data) => data,
         Err(e) => {
             eprintln!("Failed to fetch image: {:?}", e.source());
@@ -88,8 +98,6 @@ async fn process_schedule(data: WhatsappMessage) {
 async fn fetch_image(url: String) -> Result<bytes::Bytes, reqwest::Error> {
     println!("Fetching image...");
     let client = reqwest::Client::new();
-
-    let url = url.replace("localhost", "waha");
 
     let response = client
         .get(url)
