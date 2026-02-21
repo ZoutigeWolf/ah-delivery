@@ -26,9 +26,9 @@ static RE_BODY: LazyLock<Regex> = LazyLock::new(|| {
 
 pub fn parse_schedule(data: WhatsappMessage) {
     println!("Parsing...");
-    if !RE_BODY.is_match(&data.body)
-        || data.media.is_none()
-        || data.media.as_ref().unwrap().mimetype != "image/jpeg"
+    if !RE_BODY.is_match(&data.payload.body)
+        || data.payload.media.is_none()
+        || data.payload.media.as_ref().unwrap().mimetype != "image/jpeg"
     {
         return;
     }
@@ -43,13 +43,13 @@ pub fn parse_schedule(data: WhatsappMessage) {
 async fn process_schedule(data: WhatsappMessage) {
     println!("Processing...");
 
-    let Some(meta) = parse_metadata(data.body) else {
+    let Some(meta) = parse_metadata(data.payload.body) else {
         return;
     };
 
     println!("Meta parsed");
 
-    let image_data = match fetch_image(data.media.unwrap().url).await {
+    let image_data = match fetch_image(data.payload.media.unwrap().url).await {
         Ok(data) => data,
         Err(e) => {
             eprintln!("Failed to fetch image: {}", e);

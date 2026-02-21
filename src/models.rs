@@ -12,6 +12,12 @@ static BOFF_ID: LazyLock<String> =
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct WhatsappMessage {
+    #[serde(rename = "payload")]
+    pub payload: WhatsappPayload,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct WhatsappPayload {
     #[serde(rename = "body")]
     pub body: String,
 
