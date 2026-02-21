@@ -52,7 +52,7 @@ async fn process_schedule(data: WhatsappMessage) {
     let image_data = match fetch_image(data.payload.media.unwrap().url).await {
         Ok(data) => data,
         Err(e) => {
-            eprintln!("Failed to fetch image: {}", e);
+            eprintln!("Failed to fetch image: {:?}", e.source());
             return;
         }
     };
