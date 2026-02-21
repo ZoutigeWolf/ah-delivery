@@ -149,17 +149,17 @@ pub fn parse_shifts(meta: (NaiveDate, Planning), data: Vec<Vec<String>>) -> Vec<
     data.iter()
         .filter_map(|e| {
             let start = NaiveTime::parse_from_str(&e[3], "%H:%M").ok();
-            let end = NaiveTime::parse_from_str(&e[4], "%H:%M").ok();
+            let end = NaiveTime::parse_from_str(&e[4], "%H:%M").unwrap_or(NaiveTime::from_hms_opt(21, 0, 0).unwrap());
 
-            match (start, end) {
-                (Some(start_time), Some(end_time)) => Some(Shift {
+            match (start) {
+                Some(start_time) => Some(Shift {
                     boff_id: e[0].clone(),
                     name: e[1].clone(),
                     info: Some(e[2].clone()).filter(|s| !s.trim().is_empty()),
                     planning: meta.1,
                     date: meta.0,
                     start: start_time,
-                    end: end_time,
+                    end,
                 }),
                 _ => None,
             }

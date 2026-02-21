@@ -69,8 +69,15 @@ pub async fn get_calendar() -> impl IntoResponse {
             shift.date, shift.end,
         ))));
 
-        event.push(Summary::new(shift.code()));
-        event.push(Location::new("HSC Bleiswijk\\nAquamarijnweg 2\\, 2665 PB\\nBleiswijk\\, Netherlands"));
+        event.push(Summary::new(
+            shift
+                .info
+                .as_ref()
+                .map_or(shift.code(), |info| format!("{} ({})", shift.code(), info)),
+        ));
+        event.push(Location::new(
+            "HSC Bleiswijk\\nAquamarijnweg 2\\, 2665 PB\\nBleiswijk\\, Netherlands",
+        ));
 
         if let Some(info) = shift.info.clone() {
             event.push(Description::new(info));
