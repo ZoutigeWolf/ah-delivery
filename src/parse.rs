@@ -89,6 +89,8 @@ async fn fetch_image(url: String) -> Result<bytes::Bytes, reqwest::Error> {
     println!("Fetching image...");
     let client = reqwest::Client::new();
 
+    let url = url.replace("localhost", "waha");
+
     let response = client
         .get(url)
         .header("X-Api-Key", &*API_KEY)
