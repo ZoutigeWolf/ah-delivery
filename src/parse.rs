@@ -140,7 +140,7 @@ fn parse_metadata(data: String) -> Option<(NaiveDate, Planning)> {
         _ => return None,
     };
 
-    let date = NaiveDate::parse_from_str(&caps["date"], "%d-%m-%Y").ok()?;
+    let date = NaiveDate::parse_from_str(&caps["date"], "%-d-%-m-%Y").ok()?;
 
     Some((date, planning))
 }
